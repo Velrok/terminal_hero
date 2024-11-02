@@ -25,6 +25,7 @@ type Hero {
 
 type Monster {
   Goblins(hp: Int)
+  Wyrm(hp: Int)
   None(hp: Int)
 }
 
@@ -87,7 +88,7 @@ fn set_the_scene(level: Level) {
     }
     Dragon -> {
       println(ascii_art.dragon)
-      println("Oh no! There is a dragon threatenting the kingdom!")
+      println("Oh no! There is a dragon threatening the kingdom!")
     }
     Bailed -> todo
     TheEnd -> todo
@@ -100,7 +101,10 @@ fn print_hero_stats(hero: Hero) {
 
 fn read_action() -> Result(Action, String) {
   let assert Ok(input) = erlang.get_line("What do you want to do❔ > ")
-  let input = input |> string.trim |> string.lowercase
+  let input =
+    input
+    |> string.trim
+    |> string.lowercase
 
   case input {
     "bail" -> Ok(Bail)
@@ -128,8 +132,8 @@ fn handle_action(a: Action, game_state: GameState) -> #(ReplState, GameState) {
     Bail -> #(Stop, game_state)
     Explore -> explore(game_state)
     Fight -> fight(game_state)
-    // #(Continue, game_state)
   }
+  // #(Continue, game_state)
 }
 
 fn explore(game_state: GameState) {
@@ -138,7 +142,7 @@ fn explore(game_state: GameState) {
       GameState(..game_state, level: GoblinsAttack, monster: Goblins(hp: 3))
     }
     GoblinsAttack -> {
-      GameState(..game_state, level: Dragon, monster: None(hp: 100))
+      GameState(..game_state, level: Dragon, monster: Wyrm(hp: 6))
     }
     Dragon -> todo
     Bailed -> todo
@@ -160,7 +164,6 @@ fn fight(game_state: GameState) {
     }
     GoblinsAttack -> {
       let roll = int.random(3) + 1
-      // io.debug(roll)
       let roll_result = case roll {
         1 -> Failure
         2 -> Success
@@ -192,7 +195,37 @@ fn fight(game_state: GameState) {
         }
       }
     }
-    Dragon -> todo
+    Dragon -> {
+      let roll = int.random(3) + 1
+      let roll_result = case roll {
+        1 -> Failure
+        2 -> Failure
+        3 -> Success
+        _ -> panic
+      }
+
+      case roll_result {
+        Success -> {
+          println("You strike true!")
+          let dragon_hp = game_state.monster.hp - 1
+
+          case dragon_hp > 0 {
+            True -> {
+              println("The Dragon is (slightly) wounded!")
+              GameState(..game_state, monster: Wyrm(hp: dragon_hp))
+            }
+            False -> {
+              println("The Dragon is slain! The kingdom rejoices!")
+              GameState(..game_state, level: Dragon, monster: None(hp: 100))
+            }
+          }
+        }
+        Failure -> {
+          println("Your sword bounces off the dragon's scales.")
+          GameState(..game_state, hero: Hero(hp: game_state.hero.hp - 1))
+        }
+      }
+    }
     Bailed -> todo
     TheEnd -> todo
   }
@@ -211,6 +244,7 @@ fn print_available_actions() {
 -----------------
 bail
 explore
+fight
 ",
   )
 }
